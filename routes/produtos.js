@@ -1,54 +1,64 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const login = require('../middleware/login');
+const produtoController = require('../controllers/produtos-controllers');
 
-// RETORNA TODOS OS PRODUTOS
-router.get('/', (req, res, next) => {
-    res.status(200).send({
-        mensagem: 'Retorna todos os produtos'
-    });
-});
-
-// INSERE UM PRODUTO
-router.post('/', (req, res, next) => {
-
-    const produto = {
-        nome: req.body.nome,
-        preco: req.body.preco
-    };
-    res.status(201).send({
-        mensagem: 'Insere um produto',
-        produtoCriado: produto
-    });
-});
-
-// RETORNA OS DADOS DE UM PRODUTO
-router.get('/:id_produto', (req, res, next) => {
-    const id = req.params.id_produto
-
-    if(id === 'especial'){
-        res.status(200).send({
-            mensagem: 'Você descobriu o ID especial',
-            id: id
-        });
-    } else {
-        res.status(200).send({
-            mensagem: 'Você passou um ID'
-        });
+const storage = multer.diskStorage({
+    destination: function (req, file, cb){
+        cb(null, './uploads/');
+    },
+    filename: function (req, file, cb){
+        let data = new Date().toISOString().replace(/:/g, '-') + '-';
+        cb(null, data + file.originalname );
     }
 });
 
-// ALTERA UM PRODUTO
-router.patch('/', (req, res, next) => {
-    res.status(201).send({
-        mensagem: 'Produto alterado'
-    });
+const fileFilter = (req, file, cb) => {
+    if(file.mimetype === 'image/jpeg' || file.mimetype === 'image/png'){
+        cb(null, true);
+    }else{
+        cb(null, false);
+    }
+}
+
+
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 1024 * 1024 * 5
+    },
+    fileFilter: fileFilter
 });
 
-router.delete('/', (req, res, next) => {
-    res.status(201).send({
-        mensagem: 'Produto excluido'
-    });
-});
 
-// EXCLUI UM PRODUTO
+router.get(
+    '/',
+     produtoController.getProdutos
+);
+
+router.post(
+    '/',
+    login.obrigatorio,
+    upload.single('produto_imagem'),
+    produtoController.postProdutos
+);
+
+router.get(
+    '/:id_produto',
+    produtoController.getUmProduto
+);
+
+router.patch(
+    '/',
+    login.obrigatorio,
+    produtoController.patchProduto
+);
+
+router.delete(
+    '/',
+    login.obrigatorio,
+    produtoController.deleteProduto
+);
+
 module.exports = router;
